@@ -4,6 +4,22 @@ Hard-won facts from getting MiniMax H3 running locally. Update this file wheneve
 something new and non-obvious is discovered — wrong assumption, new bottleneck,
 a fix that worked, a model/workflow worth keeping. Keep entries short and dated.
 
+## Read this first: Wan 2.2 TI2V-5B >> MiniMax H3 for speed on this hardware
+
+If audio isn't required, **use Wan 2.2 TI2V-5B instead of MiniMax H3.**
+2026-08-29 test: 10m03s total (512x512, 1s, 20 steps, standard CFG) vs MiniMax
+H3 Turbo's 21m33s for *sampling alone*. ~6.5x faster per step (24.6s vs
+161s). Why: the whole 5B-param diffusion model fits in VRAM with **zero
+offloading** (`loaded completely ... full load: True`) — no GPU↔RAM weight
+shuffling per step, which is what actually made MiniMax H3 slow (see
+"RAM is the actual ceiling" below — same root cause, opposite fix: instead of
+tolerating the offload, use a model small enough to avoid it entirely).
+
+Trade-off: Wan 2.2 TI2V-5B is video-only, no native audio (unlike MiniMax
+H3's joint audio+video). Pick MiniMax H3 only when audio actually matters.
+
+See "Wan 2.2 TI2V-5B setup" section below for exact files/workflow.
+
 ## Hardware (fixed constraints, not going away)
 
 - GPU: NVIDIA GTX 1080, 8GB VRAM, **Pascal** (compute capability 6.1) — no tensor
@@ -108,6 +124,34 @@ harmless to leave installed, but **don't expect it to fix speed** — the
 actual lever that worked is the Turbo LoRA (above), and any future win has to
 attack the VRAM↔RAM offload cost, not compute.
 
+## Wan 2.2 TI2V-5B setup — the fast option (no audio)
+
+Official ComfyUI template `video_wan2_2_5B_ti2v` (fetch via
+`mcp__comfy-mcp__fetch_template`) uses standard safetensors loaders that
+don't fit our VRAM/RAM as cleanly as GGUF — converted it the same way as
+MiniMax H3: swap `UNETLoader`→`UnetLoaderGGUF` and `CLIPLoader`→
+`CLIPLoaderGGUF`, keep `VAELoader` as-is (VAE isn't the bottleneck, plain
+safetensors is fine).
+
+- Diffusion model: `QuantStack/Wan2.2-TI2V-5B-GGUF` on HuggingFace,
+  `Wan2.2-TI2V-5B-Q5_K_M.gguf` (~3.81GB) → `models/unet/`.
+- Text encoder: `city96/umt5-xxl-encoder-gguf` (same author as ComfyUI-GGUF),
+  `umt5-xxl-encoder-Q4_K_M.gguf` (~3.66GB) → `models/text_encoders/`, load
+  via `CLIPLoaderGGUF` with `type: "wan"`.
+- VAE: `Comfy-Org/Wan_2.2_ComfyUI_Repackaged`,
+  `split_files/vae/wan2.2_vae.safetensors` (~1.41GB) → `models/vae/`,
+  standard `VAELoader` (not GGUF).
+- No extra custom nodes needed beyond what MiniMax H3 already required
+  (ComfyUI-GGUF covers both).
+- Workflow: `wan22_ti2v_5b_gguf.json` (in `user/default/workflows/` and this
+  repo's `workflows/`). `Wan22ImageToVideoLatent` node controls
+  width/height/length(frames)/batch — first test used [512, 512, 25, 1]
+  (conservative; untested how far this can scale on this hardware yet).
+  `KSampler` uses standard CFG=5 (2x forward pass/step, unlike MiniMax
+  Turbo's CFG-free `BasicGuider`) — a Wan Turbo/Lightning LoRA likely exists
+  community-side (saw `hum-ma/Wan2.2-TI2V-5B-Turbo-GGUF` while researching)
+  but hasn't been tried here yet.
+
 ## Known-bad node settings on this GPU
 
 - `upscale_method: nvidia_rtx_vsr` (in `ImageResizeKJv2`/similar resize nodes)
@@ -154,6 +198,9 @@ live server's HTTP API directly regardless.
 
 ## Workflow files (in `user/default/workflows/`)
 
+- `wan22_ti2v_5b_gguf.json` — **fastest option, no audio.** Wan 2.2 TI2V-5B,
+  10min total for a 512x512/1s clip vs MiniMax's 21-72min. See "Wan 2.2
+  TI2V-5B setup" above. Use this unless audio is required.
 - `minimax_h3_fl2v_gguf.json` — baseline, 25 steps, no LoRA, proven working
   end-to-end. Image-to-video (needs `first_frame`/`last_frame`; use
   `example.png` — already in `input/` — for both if you don't have real

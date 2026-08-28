@@ -1,10 +1,25 @@
 #!/usr/bin/env bash
-# Downloads all models needed by both workflows in this repo.
-# Run after setup.sh. ~30GB total — takes a while.
+# Downloads all models needed by the workflows in this repo.
+# Run after setup.sh. ~38GB total (MiniMax H3 ~30GB + Wan 2.2 TI2V-5B ~9GB) —
+# takes a while. Only need MiniMax H3's models if you specifically need audio;
+# Wan 2.2 TI2V-5B is faster and sufficient for video-only use (see CLAUDE.md).
 set -e
 COMFYUI_DIR="${COMFYUI_DIR:-$HOME/ComfyUI}"
 cd "$COMFYUI_DIR"
 
+echo "=== Wan 2.2 TI2V-5B: diffusion model Q5_K_M (3.81GB) — the fast, no-audio option ==="
+wget -c -q --show-progress -O "models/unet/Wan2.2-TI2V-5B-Q5_K_M.gguf" \
+  "https://huggingface.co/QuantStack/Wan2.2-TI2V-5B-GGUF/resolve/main/Wan2.2-TI2V-5B-Q5_K_M.gguf"
+
+echo "=== Wan 2.2 TI2V-5B: text encoder Q4_K_M (3.66GB) ==="
+wget -c -q --show-progress -O "models/text_encoders/umt5-xxl-encoder-Q4_K_M.gguf" \
+  "https://huggingface.co/city96/umt5-xxl-encoder-gguf/resolve/main/umt5-xxl-encoder-Q4_K_M.gguf"
+
+echo "=== Wan 2.2 TI2V-5B: VAE (1.41GB) ==="
+wget -c -q --show-progress -O "models/vae/wan2.2_vae.safetensors" \
+  "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/vae/wan2.2_vae.safetensors"
+
+echo "=== MiniMax H3 (audio+video) — only needed if audio matters, see CLAUDE.md ==="
 echo "=== baseline workflow's original source JSON (reference only; use workflows/ in this repo instead) ==="
 wget -c -q --show-progress -O "/tmp/minimax_fl2v_gguf_workflow.json" \
   "https://huggingface.co/Abiray/MiniMax-H3-GGUF/resolve/main/minimax_fl2v_gguf_workflow.json" || true
