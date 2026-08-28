@@ -81,21 +81,32 @@ Cuts required sampling steps from 25 → 8 with `res_multistep` /
 1.0, `MiniMaxH3SigmaShift` video=12/audio=6, steps=8, denoise=1.0.
 Always try this LoRA before running the non-turbo path.
 
-## xformers — installed, confirmed working, not yet speed-measured
+## xformers — installed, works, but measured: no speedup on this workload
 
 `pip install xformers` (in `~/ComfyUI/venv`) installed cleanly against
 `torch==2.13.0+cu126` — despite the PyPI wheel being tagged `py39-none`, it
 works fine on this Python 3.14 venv (2026-08-28: `xformers==0.0.35`).
-Verified `xformers.ops.memory_efficient_attention` runs correctly on the GTX
-1080 (Pascal officially supported down to sm60). ComfyUI auto-detects it on
-launch with no flag needed — log line changes from `Using pytorch attention`
-to `Using xformers attention`. `--disable-xformers` would turn it back off if
-it ever causes trouble.
+`xformers.ops.memory_efficient_attention` runs correctly on the GTX 1080
+(Pascal officially supported down to sm60), and ComfyUI auto-detects it on
+launch with no flag needed (log: `Using xformers attention`).
 
-**Not yet A/B tested for actual speed/VRAM impact on a real MiniMax H3 run**
-— do that before assuming it helps in practice; update this section with
-before/after numbers once measured (compare against the Turbo LoRA's 21m27s
-sampling baseline, same 8-step/2s-clip settings, everything else equal).
+**A/B tested 2026-08-28, same Turbo LoRA workflow/settings (8 steps, 2s clip)
+both times: no meaningful difference.**
+
+| | No xformers | With xformers |
+|---|---|---|
+| Per-step | 157-163s | 161-166s |
+| Sampling total | 21m27s | 21m33s |
+| End-to-end total | 28m36s | 27m41s |
+
+Difference is within run-to-run noise (~1-3%). Every step logs `loaded
+partially; ~3.8GB usable, ~3.1GB loaded, ~5.6GB offloaded` — the per-step
+cost here is dominated by shuffling offloaded weights between VRAM and RAM
+each step, not attention compute. xformers optimizes attention; it doesn't
+touch that offload/swap path, so it can't help on this workload. Conclusion:
+harmless to leave installed, but **don't expect it to fix speed** — the
+actual lever that worked is the Turbo LoRA (above), and any future win has to
+attack the VRAM↔RAM offload cost, not compute.
 
 ## Known-bad node settings on this GPU
 
