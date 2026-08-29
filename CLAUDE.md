@@ -20,6 +20,39 @@ H3's joint audio+video). Pick MiniMax H3 only when audio actually matters.
 
 See "Wan 2.2 TI2V-5B setup" section below for exact files/workflow.
 
+## Standard test input (use for every test from here on, per user 2026-08-29)
+
+All three workflows are pre-loaded with this as their default input — don't
+revert to `example.png`/placeholder prompts when testing changes:
+
+- **Image:** `test_reference_room.png` (in `ComfyUI/input/` and this repo's
+  `test_assets/`) — a cozy loft office: floor-to-ceiling windows onto a foggy
+  forest, triple-monitor desk setup, a fire feature bottom-right, polished
+  dark wood floor. Copied from
+  `~/Pictures/Screenshots/Screenshot_20260823_131242.png`.
+- **Prompt:** *"Animate this image into a seamless 3-second loop with a
+  completely static camera angle (do not pan or zoom). Outside the large
+  windows, the fog should drift slowly and naturally through the forest, and
+  the evergreen trees should sway gently in a light breeze. Inside the room,
+  the flames in the fire feature on the bottom right should flicker and move
+  realistically. The computer monitors on the desk should show active,
+  continuous work animations like scrolling text or data. Enhance the
+  lighting and animate the reflections on the polished floor so they react
+  dynamically and naturally to the flickering fire and screen light."*
+- **Duration:** 3 seconds (73 frames @ 24fps). **Aspect:** 16:9 (matches the
+  source image, ~1.78:1) instead of the earlier default square crop.
+
+Set via `mcp__comfy-mcp__set_workflow_slot` (not hand-edited JSON) — use
+`list_workflow_slots` first to get exact addresses if the workflows change
+structure later; `133.prompt`/`149.image`/`150.image`/`135.value` for the
+Turbo workflow, `105/104.prompt`/`121.image`/`125.image`/`105/111.value` for
+the baseline (subgraph-interior addresses), `6.text`/`56.image`/`55.length`
+for Wan 2.2 (flat, no subgraph).
+
+Not yet run with this input as of this note — validated clean
+(`validate_workflow` passed on all three) but no generation test done yet.
+Update this section with the actual result once run.
+
 ## Hardware (fixed constraints, not going away)
 
 - GPU: NVIDIA GTX 1080, 8GB VRAM, **Pascal** (compute capability 6.1) — no tensor
