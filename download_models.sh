@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Downloads all models needed by the workflows in this repo.
-# Run after setup.sh. ~38GB total (MiniMax H3 ~30GB + Wan 2.2 TI2V-5B ~9GB) —
-# takes a while. Only need MiniMax H3's models if you specifically need audio;
-# Wan 2.2 TI2V-5B is faster and sufficient for video-only use (see CLAUDE.md).
+# Run after setup.sh. ~42GB total (MiniMax H3 ~30GB + Wan 2.2 TI2V-5B base
+# ~9GB + Turbo checkpoint ~3.6GB) — takes a while. Only need MiniMax H3's
+# models if you specifically need audio; Wan 2.2 TI2V-5B Turbo is much
+# faster and sufficient for video-only use (see CLAUDE.md).
 set -e
 COMFYUI_DIR="${COMFYUI_DIR:-$HOME/ComfyUI}"
 cd "$COMFYUI_DIR"
@@ -18,6 +19,10 @@ wget -c -q --show-progress -O "models/text_encoders/umt5-xxl-encoder-Q4_K_M.gguf
 echo "=== Wan 2.2 TI2V-5B: VAE (1.41GB) ==="
 wget -c -q --show-progress -O "models/vae/wan2.2_vae.safetensors" \
   "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/vae/wan2.2_vae.safetensors"
+
+echo "=== Wan 2.2 TI2V-5B Turbo: pre-merged checkpoint Q5_K_M (3.6GB) — use this by default ==="
+wget -c -q --show-progress -O "models/unet/Wan2_2-TI2V-5B-Turbo-Q5_K_M.gguf" \
+  "https://huggingface.co/hum-ma/Wan2.2-TI2V-5B-Turbo-GGUF/resolve/main/Wan2_2-TI2V-5B-Turbo-Q5_K_M.gguf"
 
 echo "=== MiniMax H3 (audio+video) — only needed if audio matters, see CLAUDE.md ==="
 echo "=== baseline workflow's original source JSON (reference only; use workflows/ in this repo instead) ==="

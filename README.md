@@ -5,13 +5,13 @@ ComfyUI on a GPU that officially has no business running any of this: a
 GTX 1080 (Pascal, 8GB VRAM, no tensor cores), 15.6GB system RAM. Covers two
 models:
 
-- **[Wan 2.2 TI2V-5B](https://huggingface.co/QuantStack/Wan2.2-TI2V-5B-GGUF)** — video only, no audio. **~10 min for a short clip. Use this by default.**
+- **[Wan 2.2 TI2V-5B](https://huggingface.co/QuantStack/Wan2.2-TI2V-5B-GGUF) (Turbo checkpoint)** — video only, no audio. **~9 min for a real 3s/832x480 clip. Use this by default.**
 - **[MiniMax H3](https://www.minimax.io/blog/minimax-h3)** — video **with native joint audio**, much larger (26-33B params vs 5B), 21-72 min for a short clip on this hardware. Use only when audio is required.
 
 This repo is **not** a ComfyUI install — it's the notes, scripts, and
 workflow files needed to rebuild one from scratch after a format/reinstall.
-Models are downloaded separately, not stored here (~9GB for Wan 2.2 alone,
-~38GB if you also want MiniMax H3).
+Models are downloaded separately, not stored here (~13GB for Wan 2.2 alone,
+~42GB if you also want MiniMax H3).
 
 ## Quick start (fresh machine)
 
@@ -19,15 +19,16 @@ Models are downloaded separately, not stored here (~9GB for Wan 2.2 alone,
 git clone <this-repo-url>
 cd minimax-h3-comfyui-lowvram
 ./setup.sh                 # clones ComfyUI, builds the venv, installs everything
-./download_models.sh       # ~9-38GB depending on which model(s) you want
+./download_models.sh       # ~13-42GB depending on which model(s) you want
 cd ~/ComfyUI && venv/bin/python main.py --enable-manager
 # open http://127.0.0.1:8188 (not "localhost" — see CLAUDE.md)
 ```
 
-Then in ComfyUI, open the `wan22_ti2v_5b_gguf` workflow (Workflows sidebar,
-fastest, no audio) or `minimax_h3_fl2v_gguf_turbo` (audio, slower) and hit
-Run. Start with the default low-resolution/short-duration settings before
-pushing further — see CLAUDE.md for why.
+Then in ComfyUI, open the `wan22_ti2v_5b_turbo_gguf` workflow (Workflows
+sidebar, fastest, no audio) or `minimax_h3_fl2v_gguf_turbo` (audio, slower)
+and hit Run. All workflows come pre-loaded with a standard test
+image+prompt (`test_assets/test_reference_room.png`) — swap the `LoadImage`
+node and prompt text for your own content.
 
 ## What's in here
 
@@ -35,10 +36,12 @@ pushing further — see CLAUDE.md for why.
 |---|---|
 | `CLAUDE.md` | Everything non-obvious learned getting this working — read this first if something breaks. Auto-loaded by Claude Code when working in this repo or the ComfyUI directory. |
 | `setup.sh` | Clones ComfyUI, creates the venv, installs the *correct* torch build, custom nodes, and xformers |
-| `download_models.sh` | Downloads all GGUF model files for both Wan 2.2 TI2V-5B and MiniMax H3 |
-| `workflows/wan22_ti2v_5b_gguf.json` | **Fastest, no audio.** ~10 min for a 512x512/1s clip. |
+| `download_models.sh` | Downloads all GGUF model files for Wan 2.2 TI2V-5B (base + Turbo) and MiniMax H3 |
+| `workflows/wan22_ti2v_5b_turbo_gguf.json` | **Fastest, no audio.** 4 steps/CFG=1. ~9 min for a real 3s/832x480 clip. |
+| `workflows/wan22_ti2v_5b_gguf.json` | Same model, base (non-turbo) checkpoint — slower, only useful as a quality reference. |
 | `workflows/minimax_h3_fl2v_gguf_turbo.json` | Audio+video, Turbo LoRA + 8 steps. ~28 min for a 2s clip. |
 | `workflows/minimax_h3_fl2v_gguf.json` | Audio+video baseline, 25 steps, no LoRA. ~72 min for a 2s clip — only for reference, prefer the turbo version. |
+| `test_assets/test_reference_room.png` | Standard test image (loft office, forest view, fireplace) used as the default input across all workflows |
 | `cleanup.sh` | Safely remove the ComfyUI install if an experiment goes wrong (dry-run by default) |
 
 ## Why this needed its own repo

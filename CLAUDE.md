@@ -49,9 +49,15 @@ Turbo workflow, `105/104.prompt`/`121.image`/`125.image`/`105/111.value` for
 the baseline (subgraph-interior addresses), `6.text`/`56.image`/`55.length`
 for Wan 2.2 (flat, no subgraph).
 
-Not yet run with this input as of this note — validated clean
-(`validate_workflow` passed on all three) but no generation test done yet.
-Update this section with the actual result once run.
+**2026-08-29 result (Wan 2.2 TI2V-5B Turbo, see section below):** 8m41.8s
+total for the full 3s/832x480 clip with this real prompt+image — first
+result using actual content rather than a mismatched speed-test placeholder.
+One VRAM warning during VAE decode at this resolution (`Ran out of memory
+when regular VAE decoding, retrying with tiled VAE decoding`) — ComfyUI's
+automatic fallback handled it, not a crash, but worth knowing this
+resolution is near the VAE decode ceiling. Base (non-turbo) Wan 2.2 and both
+MiniMax H3 variants not yet run with this exact input — only the Turbo GGUF
+variant has a real-content result so far.
 
 ## Hardware (fixed constraints, not going away)
 
@@ -178,12 +184,29 @@ safetensors is fine).
   (ComfyUI-GGUF covers both).
 - Workflow: `wan22_ti2v_5b_gguf.json` (in `user/default/workflows/` and this
   repo's `workflows/`). `Wan22ImageToVideoLatent` node controls
-  width/height/length(frames)/batch — first test used [512, 512, 25, 1]
-  (conservative; untested how far this can scale on this hardware yet).
-  `KSampler` uses standard CFG=5 (2x forward pass/step, unlike MiniMax
-  Turbo's CFG-free `BasicGuider`) — a Wan Turbo/Lightning LoRA likely exists
-  community-side (saw `hum-ma/Wan2.2-TI2V-5B-Turbo-GGUF` while researching)
-  but hasn't been tried here yet.
+  width/height/length(frames)/batch — now set to the standard test input
+  (832x480, 73 frames = 3s). `KSampler` uses standard CFG=5 (2x forward
+  pass/step).
+
+### Turbo variant — tested, works, use this by default
+
+`hum-ma/Wan2.2-TI2V-5B-Turbo-GGUF` on HuggingFace ships a **pre-merged**
+Turbo checkpoint (not a separate LoRA to juggle) — just swap `unet_name`.
+Used `Wan2_2-TI2V-5B-Turbo-Q5_K_M.gguf` (~3.6GB) → `models/unet/`. Recommended
+settings from the repo's README: **4 steps, CFG=1**, sampler
+euler/sa_solver/uni_pc, scheduler simple/normal/beta — kept `uni_pc`/`simple`
+(already matched). Text encoder and VAE are shared with the base model, no
+separate download.
+
+Workflow: `wan22_ti2v_5b_turbo_gguf.json` — copy of the base Wan 2.2 workflow
+with `unet_name`, `steps=4`, `cfg=1` changed via `set_workflow_slot`.
+
+**2026-08-29 result, real content (standard test input, 3s/832x480):
+8m41.8s total.** One automatic VAE-decode-to-tiled fallback triggered at this
+resolution (see "Standard test input" above) — worth watching, not yet
+compared against the base (non-turbo) model at these same settings to know
+how much the Turbo checkpoint itself saves here (only compared apples-to-oranges
+against the base model's earlier smaller/mismatched-content test).
 
 ## Known-bad node settings on this GPU
 
@@ -231,9 +254,12 @@ live server's HTTP API directly regardless.
 
 ## Workflow files (in `user/default/workflows/`)
 
-- `wan22_ti2v_5b_gguf.json` — **fastest option, no audio.** Wan 2.2 TI2V-5B,
-  10min total for a 512x512/1s clip vs MiniMax's 21-72min. See "Wan 2.2
-  TI2V-5B setup" above. Use this unless audio is required.
+- `wan22_ti2v_5b_turbo_gguf.json` — **fastest, use by default, no audio.**
+  Wan 2.2 TI2V-5B Turbo checkpoint, 4 steps/CFG=1. 8m42s for a real 3s/832x480
+  clip. See "Wan 2.2 TI2V-5B setup" → "Turbo variant" above.
+- `wan22_ti2v_5b_gguf.json` — same model, base (non-turbo) checkpoint, 20
+  steps/CFG=5. Slower, only useful as a quality comparison baseline against
+  the Turbo variant. See "Wan 2.2 TI2V-5B setup" above.
 - `minimax_h3_fl2v_gguf.json` — baseline, 25 steps, no LoRA, proven working
   end-to-end. Image-to-video (needs `first_frame`/`last_frame`; use
   `example.png` — already in `input/` — for both if you don't have real

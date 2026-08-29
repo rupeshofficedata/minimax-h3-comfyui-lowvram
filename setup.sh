@@ -49,12 +49,13 @@ git clone https://github.com/kijai/ComfyUI-KJNodes.git custom_nodes/comfyui-kjno
 echo "=== 6/6: xformers (confirmed working on Pascal despite py39 wheel tag) ==="
 venv/bin/pip install --no-cache-dir xformers
 
-echo "=== copy in the known-good workflows ==="
-mkdir -p user/default/workflows
+echo "=== copy in the known-good workflows and standard test image ==="
+mkdir -p user/default/workflows input
 cp "$REPO_DIR"/workflows/*.json user/default/workflows/
+cp "$REPO_DIR"/test_assets/*.png input/
 
 echo
 echo "Setup done. Next:"
-echo "  1. COMFYUI_DIR=$COMFYUI_DIR $REPO_DIR/download_models.sh   (~30GB)"
+echo "  1. COMFYUI_DIR=$COMFYUI_DIR $REPO_DIR/download_models.sh   (~13-42GB)"
 echo "  2. cd $COMFYUI_DIR && venv/bin/python main.py --enable-manager"
 echo "  3. Open http://127.0.0.1:8188 (NOT 'localhost' — see CLAUDE.md)"
